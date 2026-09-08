@@ -16,7 +16,7 @@
                 <h2>{{ $editingProductId ? 'Edit product' : 'New product' }}</h2><span class="form-note">Costs are
                     calculated from total cost and quantity.</span>
             </div>
-            <form wire:submit="save" class="product-form">
+            <form wire:submit.prevent="save" class="product-form">
                 <label>
                     Name
                     <input wire:model="name" type="text" placeholder="Product name">

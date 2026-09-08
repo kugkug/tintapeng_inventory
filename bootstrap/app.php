@@ -1,9 +1,16 @@
 <?php
 
+use App\Http\Middleware\EnsureTenantFromToken;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,10 +21,20 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'tenant.scoped' => \App\Http\Middleware\EnsureTenantFromToken::class,
+            'tenant.scoped' => EnsureTenantFromToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->report(function (Throwable $exception, Request $request): void {
+            Log::error('Unhandled application error.', [
+                'exception' => $exception,
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'user_id' => auth()->id(),
+                'tenant_id' => auth()->user()?->tenant_id,
+            ]);
+        });
+
         // Always render JSON for API routes
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
@@ -27,7 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (Throwable $e, Request $request) {
             if ($request->is('api/*')) {
                 // Handle authentication exceptions
-                if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                if ($e instanceof AuthenticationException) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Unauthenticated',
@@ -36,7 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
 
                 // Handle authorization exceptions
-                if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
+                if ($e instanceof AuthorizationException) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Unauthorized',
@@ -45,7 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
 
                 // Handle model not found exceptions
-                if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                if ($e instanceof ModelNotFoundException) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Resource not found',
@@ -54,7 +71,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
 
                 // Handle validation exceptions
-                if ($e instanceof \Illuminate\Validation\ValidationException) {
+                if ($e instanceof ValidationException) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Validation failed',
@@ -63,7 +80,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
 
                 // Handle database exceptions
-                if ($e instanceof \PDOException || $e instanceof \Illuminate\Database\QueryException) {
+                if ($e instanceof PDOException || $e instanceof QueryException) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Database error',

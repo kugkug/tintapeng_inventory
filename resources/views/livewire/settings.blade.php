@@ -3,14 +3,14 @@
         <div>
             <p class="eyebrow">Workspace</p>
             <h1>Settings</h1>
-            <p class="muted">Manage your profile, product categories, and units of measurement.</p>
+            <p class="muted">Manage your profile, product categories, units of measurement, and locations.</p>
         </div>
     </div>
     <section class="form-panel narrow">
         <div class="section-heading">
             <h2>Profile</h2>
         </div>
-        <form wire:submit="save" class="stack-form"><label>Name<input wire:model="name" type="text">
+        <form wire:submit.prevent="save" class="stack-form"><label>Name<input wire:model="name" type="text">
                 @error('name')
                     <span class="field-error">{{ $message }}</span>
                 @enderror
@@ -30,7 +30,7 @@
                 <div class="section-heading">
                     <h2>Categories</h2><span class="muted">{{ $categories->count() }} total</span>
                 </div>
-                <form wire:submit="saveCategory" class="stack-form"><label>Name<input wire:model="categoryName"
+                <form wire:submit.prevent="saveCategory" class="stack-form"><label>Name<input wire:model="categoryName"
                             type="text" placeholder="e.g. Beverages">
                         @error('categoryName')
                             <span class="field-error">{{ $message }}</span>
@@ -70,8 +70,8 @@
                     <h2>Units of measurement</h2><span class="muted">{{ $units->where('is_active', true)->count() }}
                         active</span>
                 </div>
-                <form wire:submit="saveUnit" class="stack-form"><label>Name<input wire:model="unitName" type="text"
-                            placeholder="e.g. Kilogram">
+                <form wire:submit.prevent="saveUnit" class="stack-form"><label>Name<input wire:model="unitName"
+                            type="text" placeholder="e.g. Kilogram">
                         @error('unitName')
                             <span class="field-error">{{ $message }}</span>
                         @enderror
@@ -101,6 +101,54 @@
                                     wire:confirm="Remove {{ $unit->name }} from product options?">Remove</button>
                             </div>
                     </div>@empty<p class="muted">No units yet.</p>
+                    @endforelse
+                </div>
+            </section>
+            <section class="form-panel">
+                <div class="section-heading">
+                    <h2>Locations</h2><span class="muted">{{ $locations->where('is_active', true)->count() }}
+                        active</span>
+                </div>
+                <form wire:submit.prevent="saveLocation" class="stack-form">
+                    <label>Name<input wire:model="locationName" type="text" placeholder="e.g. Main Store">
+                        @error('locationName')
+                            <span class="field-error">{{ $message }}</span>
+                        @enderror
+                    </label>
+                    <label>Address
+                        <textarea wire:model="locationAddress" rows="3" placeholder="Optional address"></textarea>
+                        @error('locationAddress')
+                            <span class="field-error">{{ $message }}</span>
+                        @enderror
+                    </label>
+                    <label class="check-row">
+                        <input wire:model="isMainWarehouse" type="checkbox">
+                        <span>Main warehouse</span>
+                    </label>
+                    <div class="form-actions"><button class="button button-primary"
+                            type="submit">{{ $editingLocationId ? 'Update location' : 'Add location' }}</button>
+                        @if ($editingLocationId)
+                            <button class="button button-quiet" type="button"
+                                wire:click="resetLocationForm">Cancel</button>
+                        @endif
+                    </div>
+                </form>
+                <div class="settings-list">
+                    @forelse($locations->where('is_active', true) as $location)
+                        <div class="settings-list-item">
+                            <div>
+                                <strong>{{ $location->name }}{{ $location->is_main_warehouse ? ' (Main warehouse)' : '' }}</strong>
+                                <small>{{ $location->address ?: 'No address' }}</small>
+                            </div>
+                            <div class="table-actions"><button class="button button-small" type="button"
+                                    wire:click="editLocation({{ $location->id }})">Edit</button><button
+                                    class="button button-small button-danger" type="button"
+                                    wire:click="removeLocation({{ $location->id }})"
+                                    wire:confirm="Remove {{ $location->name }} from the workspace?">Remove</button>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="muted">No locations yet.</p>
                     @endforelse
                 </div>
             </section>

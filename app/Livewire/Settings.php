@@ -3,7 +3,9 @@
 namespace App\Livewire;
 
 use App\Models\Category;
+use App\Models\Location;
 use App\Models\Unit;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -12,13 +14,28 @@ use Livewire\Component;
 class Settings extends Component
 {
     public string $name = '';
+
     public string $email = '';
+
     public string $categoryName = '';
+
     public string $categoryDescription = '';
+
     public ?int $editingCategoryId = null;
+
     public string $unitName = '';
+
     public string $unitSymbol = '';
+
     public ?int $editingUnitId = null;
+
+    public string $locationName = '';
+
+    public string $locationAddress = '';
+
+    public bool $isMainWarehouse = false;
+
+    public ?int $editingLocationId = null;
 
     public function mount(): void
     {
@@ -107,6 +124,81 @@ class Settings extends Component
         session()->flash('status', 'Unit removed from product options.');
     }
 
+    public function saveLocation(): void
+    {
+        $this->ensureManager();
+        $tenantId = auth()->user()->tenant_id;
+        $data = $this->validate([
+            'locationName' => ['required', 'string', 'max:255', Rule::unique('locations', 'name')->where(fn ($query) => $query->where('tenant_id', $tenantId))->ignore($this->editingLocationId)],
+            'locationAddress' => ['nullable', 'string', 'max:1000'],
+            'isMainWarehouse' => ['boolean'],
+        ]);
+
+        DB::transaction(function () use ($data, $tenantId): void {
+            if ($data['isMainWarehouse']) {
+                Location::where('tenant_id', $tenantId)->update(['is_main_warehouse' => false]);
+            }
+
+            Location::updateOrCreate(
+                ['id' => $this->editingLocationId, 'tenant_id' => $tenantId],
+                [
+                    'name' => trim($data['locationName']),
+                    'address' => trim($data['locationAddress'] ?? '') ?: null,
+                    'is_main_warehouse' => $data['isMainWarehouse'],
+                    'is_active' => true,
+                ],
+            );
+        });
+
+        $this->resetLocationForm();
+        session()->flash('status', 'Location saved successfully.');
+    }
+
+    public function editLocation(int $locationId): void
+    {
+        $this->ensureManager();
+        $location = Location::where('tenant_id', auth()->user()->tenant_id)
+            ->where('is_active', true)
+            ->findOrFail($locationId);
+
+        $this->editingLocationId = $location->id;
+        $this->locationName = $location->name;
+        $this->locationAddress = $location->address ?? '';
+        $this->isMainWarehouse = $location->is_main_warehouse;
+    }
+
+    public function removeLocation(int $locationId): void
+    {
+        $this->ensureManager();
+        $tenantId = auth()->user()->tenant_id;
+        $location = Location::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->findOrFail($locationId);
+
+        if (Location::where('tenant_id', $tenantId)->where('is_active', true)->count() <= 1) {
+            $this->addError('locationName', 'At least one active location is required.');
+
+            return;
+        }
+
+        $wasMainWarehouse = $location->is_main_warehouse;
+
+        DB::transaction(function () use ($location, $tenantId, $wasMainWarehouse): void {
+            $location->update(['is_active' => false, 'is_main_warehouse' => false]);
+
+            if ($wasMainWarehouse) {
+                Location::where('tenant_id', $tenantId)
+                    ->where('is_active', true)
+                    ->orderBy('id')
+                    ->limit(1)
+                    ->update(['is_main_warehouse' => true]);
+            }
+        });
+
+        $this->resetLocationForm();
+        session()->flash('status', 'Location removed from the workspace.');
+    }
+
     public function resetCategoryForm(): void
     {
         $this->reset(['categoryName', 'categoryDescription', 'editingCategoryId']);
@@ -115,6 +207,11 @@ class Settings extends Component
     public function resetUnitForm(): void
     {
         $this->reset(['unitName', 'unitSymbol', 'editingUnitId']);
+    }
+
+    public function resetLocationForm(): void
+    {
+        $this->reset(['locationName', 'locationAddress', 'isMainWarehouse', 'editingLocationId']);
     }
 
     private function ensureManager(): void
@@ -129,6 +226,7 @@ class Settings extends Component
         return view('livewire.settings', [
             'categories' => Category::where('tenant_id', $tenantId)->latest()->get(),
             'units' => Unit::where('tenant_id', $tenantId)->latest()->get(),
+            'locations' => Location::where('tenant_id', $tenantId)->latest()->get(),
         ]);
     }
 }
