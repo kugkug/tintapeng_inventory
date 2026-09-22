@@ -81,6 +81,7 @@ class SaleController extends Controller
             'items.*.location_id' => 'required|exists:locations,id',
             'discount_code' => 'nullable|string|max:50',
             'payment_method' => 'required|string|in:cash,card,check,online',
+            'amount_paid' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
@@ -153,6 +154,19 @@ class SaleController extends Controller
             }
 
             $finalTotal = max(0, $totalAmount - $discountAmount);
+            $amountPaid = $request->filled('amount_paid')
+                ? round((float) $request->input('amount_paid'), 2)
+                : round($finalTotal, 2);
+
+            if ($amountPaid < round($finalTotal, 2)) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The amount paid is less than the sale total.',
+                ], 422);
+            }
+
+            $changeAmount = round($amountPaid - $finalTotal, 2);
 
             // Create sale
             $sale = Sale::create([
@@ -163,6 +177,8 @@ class SaleController extends Controller
                 'discount_amount' => $discountAmount,
                 'total_amount' => $finalTotal,
                 'payment_method' => $request->input('payment_method'),
+                'amount_paid' => $amountPaid,
+                'change_amount' => $changeAmount,
                 'notes' => $request->input('notes'),
                 'status' => 'completed',
             ]);
@@ -197,6 +213,8 @@ class SaleController extends Controller
                     'discount_amount' => $sale->discount_amount,
                     'total_amount' => $sale->total_amount,
                     'payment_method' => $sale->payment_method,
+                    'amount_paid' => $sale->amount_paid,
+                    'change_amount' => $sale->change_amount,
                     'created_at' => $sale->created_at,
                 ],
             ], 201);

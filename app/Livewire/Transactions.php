@@ -13,6 +13,30 @@ class Transactions extends Component
     use WithPagination;
 
     public string $search = '';
+    public ?int $previewSaleId = null;
+
+    public function openPreview(int $saleId): void
+    {
+        Sale::where('tenant_id', auth()->user()->tenant_id)->findOrFail($saleId);
+
+        $this->previewSaleId = $saleId;
+    }
+
+    public function closePreview(): void
+    {
+        $this->previewSaleId = null;
+    }
+
+    public function getPreviewSaleProperty(): ?Sale
+    {
+        if ($this->previewSaleId === null) {
+            return null;
+        }
+
+        return Sale::where('tenant_id', auth()->user()->tenant_id)
+            ->with('items.product', 'user', 'location')
+            ->findOrFail($this->previewSaleId);
+    }
 
     public function updatedSearch(): void
     {

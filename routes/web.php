@@ -2,6 +2,7 @@
 
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard;
+use App\Livewire\PengPos;
 use App\Livewire\Pos;
 use App\Livewire\Products;
 use App\Livewire\Reports;
@@ -22,6 +23,7 @@ Route::middleware('guest')->get('/login', Login::class)->name('login');
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
     Route::get('/pos', Pos::class)->name('pos');
+    Route::get('/pengpos', PengPos::class)->name('pengpos');
     Route::get('/products', Products::class)->name('products');
     Route::get('/products/barcodes/pdf', function (Request $request) {
         $productIds = collect($request->input('ids', []))
@@ -74,6 +76,38 @@ Route::middleware('auth')->group(function () {
 
         return response()->download($zipPath, 'barcodes-'.now()->format('Y-m-d-His').'.zip')->deleteFileAfterSend(true);
     })->name('products.barcodes-images');
+    
+    Route::get('/products/labels/pdf', function (Request $request, BarcodeService $barcodeService) {
+        $productIds = collect($request->input('ids', []))
+            ->map(fn ($id): int => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $products = Product::where('tenant_id', auth()->user()->tenant_id)
+            ->where('is_active', true)
+            ->whereIn('id', $productIds)
+            ->orderBy('name')
+            ->get();
+
+        abort_if($products->isEmpty(), 404, 'No active products were selected.');
+
+        $labelProducts = $products->map(fn (Product $product): array => [
+            'name' => $product->name,
+            'price' => $product->selling_price,
+            'barcode' => $product->barcode_image_path
+                && Storage::disk('local')->exists($product->barcode_image_path)
+                ? 'data:image/png;base64,'.base64_encode($barcodeService->labeledBarcodeImage($product))
+                : null,
+        ])->values();
+
+        return Pdf::loadView('products.labels-pdf', ['products' => $labelProducts])
+            ->setPaper([0, 0, 113.39, 85.04])
+            ->download($products->count() === 1
+                ? 'product-label-'.$products->first()->sku.'.pdf'
+                : 'product-labels-'.now()->format('Y-m-d-His').'.pdf');
+    })->name('products.labels-pdf');
+
     Route::get('/products/{product}/barcode-image', function (Product $product) {
         abort_unless($product->tenant_id === auth()->user()->tenant_id, 404);
         abort_unless($product->barcode_image_path && Storage::disk('local')->exists($product->barcode_image_path), 404);
@@ -87,15 +121,24 @@ Route::middleware('auth')->group(function () {
     })->name('products.barcode-image');
     Route::get('/reports', Reports::class)->name('reports');
     Route::get('/transactions', Transactions::class)->name('transactions');
+    
     Route::get('/transactions/{sale}/receipt', function (Sale $sale) {
         abort_unless($sale->tenant_id === auth()->user()->tenant_id, 404);
 
         $sale->load('items.product', 'user', 'location');
+        $itemLines = $sale->items->sum(function ($item): int {
+            $nameLength = strlen($item->product?->name ?? 'Product');
+
+            return max(1, (int) ceil($nameLength / 18));
+        });
+        $receiptHeightMm = 86 + ($itemLines * 9);
+        $receiptHeightPoints = $receiptHeightMm * 2.83465;
 
         return Pdf::loadView('sales.receipt-pdf', ['sale' => $sale])
-            ->setPaper('a4')
+            ->setPaper([0, 0, 226.77, $receiptHeightPoints])
             ->download('receipt-'.$sale->id.'.pdf');
     })->name('sales.receipt');
+
     Route::get('/settings', Settings::class)->name('settings');
 
     Route::post('/logout', function () {

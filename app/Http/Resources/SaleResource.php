@@ -32,6 +32,8 @@ class SaleResource extends JsonResource
             'discount_amount' => (float) $this->discount_amount,
             'total_amount' => (float) $this->total_amount,
             'payment_method' => $this->payment_method,
+            'amount_paid' => (float) $this->amount_paid,
+            'change_amount' => (float) $this->change_amount,
             'status' => $this->status,
             'notes' => $this->notes,
             'created_at' => $this->created_at,

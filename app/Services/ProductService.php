@@ -92,7 +92,14 @@ class ProductService
     /**
      * Increment product stock
      */
-    public function incrementStock(int $productId, int $tenantId, int $quantity, int $locationId): bool
+    public function incrementStock(
+        int $productId,
+        int $tenantId,
+        int $quantity,
+        int $locationId,
+        ?string $expirationDate = null,
+        bool $setExpirationDate = false,
+    ): bool
     {
         $product = Product::where('tenant_id', $tenantId)->findOrFail($productId);
         
@@ -105,9 +112,13 @@ class ProductService
             $inventory = $product->inventoryItems()->create([
                 'location_id' => $locationId,
                 'quantity' => $quantity,
+                'expiration_date' => $setExpirationDate ? $expirationDate : null,
             ]);
         } else {
             $inventory->increment('quantity', $quantity);
+            if ($setExpirationDate) {
+                $inventory->update(['expiration_date' => $expirationDate]);
+            }
         }
         
         // Invalidate cache

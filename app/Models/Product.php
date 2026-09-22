@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -96,6 +97,14 @@ class Product extends Model
     public function getTotalStock(): int
     {
         return $this->inventoryItems()->sum('quantity');
+    }
+
+    public function scopeLowStock(Builder $query, int $threshold = 10): Builder
+    {
+        return $query->whereRaw(
+            '(select coalesce(sum(quantity), 0) from inventory_items where inventory_items.product_id = products.id) <= ?',
+            [$threshold]
+        );
     }
 
     /**

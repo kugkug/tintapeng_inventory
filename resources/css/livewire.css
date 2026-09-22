@@ -15,6 +15,494 @@
     --shadow-md: 0 10px 24px rgb(16 24 40 / 8%);
 }
 
+/* PengPOS POS presentation */
+.pengpos-page {
+    --fresh-blue: #1269e8;
+    --fresh-navy: #12345d;
+    --fresh-ink: #17365e;
+    --fresh-line: #dce8f7;
+    margin: -12px -18px;
+    width: 100%;
+    max-width: 100%;
+    min-height: calc(100vh - 24px);
+    overflow-x: hidden;
+    border: 1px solid #cbdcf2;
+    border-radius: 14px;
+    background: #edf5ff;
+    color: var(--fresh-ink);
+    box-shadow: 0 14px 35px rgb(27 77 137 / 12%);
+}
+.pengpos-fullscreen {
+    width: 100vw;
+    max-width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+.pengpos-fullscreen .pengpos-page {
+    min-height: 100vh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+.pengpos-header {
+    min-height: 92px;
+    display: grid;
+    grid-template-columns: 220px minmax(240px, 1fr) 110px 150px;
+    align-items: center;
+    gap: 20px;
+    padding: 16px 28px;
+    background: linear-gradient(105deg, #12345d, #1d4d82);
+    color: #fff;
+}
+.pengpos-brand,
+.pengpos-cashier,
+.pengpos-sale-heading,
+.pengpos-sale-labels,
+.pengpos-sale-item,
+.pengpos-payment-actions,
+.pengpos-actions {
+    display: flex;
+    align-items: center;
+}
+.pengpos-brand {
+    gap: 12px;
+}
+.pengpos-brand strong {
+    display: block;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+}
+.pengpos-brand small,
+.pengpos-cashier small,
+.pengpos-clock small {
+    display: block;
+    color: #bed4ef;
+    font-size: 10px;
+}
+.pengpos-cart-icon {
+    font-size: 30px;
+}
+.pengpos-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 15px;
+    border-radius: 7px;
+    background: #f5f9ff;
+    color: #35618f;
+}
+.pengpos-search-wrap input {
+    min-width: 0;
+    flex: 1;
+    padding: 12px 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--fresh-ink);
+    font-size: 12px;
+}
+.pengpos-quantity {
+    max-width: 60px !important;
+    padding-left: 8px !important;
+    border-left: 1px solid var(--fresh-line) !important;
+    text-align: center;
+}
+.pengpos-quantity-pill {
+    padding: 5px 8px;
+    border-radius: 5px;
+    background: #dceaff;
+    color: var(--fresh-blue);
+    font-size: 11px;
+    font-weight: 700;
+}
+.pengpos-clock {
+    text-align: right;
+    font-size: 12px;
+}
+.pengpos-cashier {
+    justify-content: flex-end;
+    gap: 9px;
+    font-size: 12px;
+}
+.pengpos-cashier > span:first-child {
+    font-size: 24px;
+}
+.pengpos-workspace {
+    display: grid;
+    grid-template-columns: 15% 45% 40%;
+    min-width: 0;
+    min-height: calc(100vh - 92px);
+}
+.pengpos-categories {
+    padding: 18px 10px;
+    background: #e4f0ff;
+}
+.pengpos-category {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 9px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #23486f;
+    text-align: left;
+    font-size: 11px;
+}
+.pengpos-category span {
+    width: 18px;
+    color: #2167ba;
+    font-size: 17px;
+    text-align: center;
+}
+.pengpos-category:hover,
+.pengpos-category.is-active {
+    background: var(--fresh-blue);
+    color: #fff;
+    box-shadow: 0 5px 12px rgb(18 105 232 / 20%);
+}
+.pengpos-category:hover span,
+.pengpos-category.is-active span {
+    color: #fff;
+}
+.pengpos-products {
+    min-width: 0;
+    overflow: hidden;
+    padding: 17px 12px 15px;
+    background: #eef6ff;
+}
+.pengpos-product-grid {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+.pengpos-product {
+    min-height: 120px;
+    display: grid;
+    align-content: space-between;
+    gap: 3px;
+    padding: 8px 10px 10px;
+    border: 1px solid #d8e6f7;
+    border-radius: 7px;
+    background: rgb(255 255 255 / 70%);
+    color: var(--fresh-ink);
+    text-align: left;
+    box-shadow: 0 2px 6px rgb(41 90 141 / 5%);
+    transition:
+        transform 140ms ease,
+        border-color 140ms ease,
+        box-shadow 140ms ease;
+}
+.pengpos-product:hover {
+    transform: translateY(-2px);
+    border-color: #7db0f1;
+    box-shadow: 0 7px 16px rgb(41 90 141 / 12%);
+}
+.pengpos-product strong {
+    min-height: 27px;
+    font-size: 14px;
+    line-height: 1;
+}
+.pengpos-product small {
+    color: #7890aa;
+    font-size: 14px;
+}
+.pengpos-product b {
+    color: var(--fresh-ink);
+    font-size: 16px;
+}
+.pengpos-product-art {
+    height: 73px;
+    display: grid;
+    place-items: center;
+    border-radius: 5px;
+    background: #d8ebff;
+    color: #2573c8;
+    font-size: 31px;
+    font-weight: 800;
+}
+.pengpos-product-art.art-1 {
+    background: #d9f2de;
+    color: #27924a;
+}
+.pengpos-product-art.art-2 {
+    background: #fff0d2;
+    color: #ec9115;
+}
+.pengpos-product-art.art-3 {
+    background: #ffe0e0;
+    color: #d74646;
+}
+.pengpos-product-art.art-4 {
+    background: #e9defc;
+    color: #7953b8;
+}
+.pengpos-product-art.art-5 {
+    background: #d8f1f1;
+    color: #218b91;
+}
+.pengpos-empty {
+    grid-column: 1 / -1;
+    padding: 70px 20px;
+    color: #6f87a1;
+    text-align: center;
+}
+.pengpos-actions {
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 12px;
+}
+.pengpos-actions button {
+    flex: 1 1 70px;
+    padding: 11px 6px;
+    border: 1px solid #c8dbf2;
+    border-radius: 5px;
+    background: #f7fbff;
+    color: #245486;
+    font-size: 10px;
+}
+.pengpos-actions button:hover {
+    border-color: var(--fresh-blue);
+    color: var(--fresh-blue);
+}
+.pengpos-actions span,
+.pengpos-payment-actions span {
+    margin-right: 5px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+.pengpos-sale {
+    min-width: 0;
+    min-height: calc(100vh - 92px);
+    height: 100%;
+    padding: 16px 11px 14px;
+    border-left: 1px solid #29496b;
+    background: #142b49;
+    color: #e8f1fc;
+}
+.pengpos-sale-heading {
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+.pengpos-sale-heading h2 {
+    margin: 0;
+    color: #f4f8fe;
+    font-size: 16px;
+    letter-spacing: -0.02em;
+}
+.pengpos-sale-heading button {
+    border: 0;
+    background: transparent;
+    color: #f05252;
+    font-size: 10px;
+}
+.pengpos-sale-labels {
+    display: grid;
+    grid-template-columns: 1.8fr 0.45fr 0.8fr 0.8fr;
+    padding: 0 7px 8px;
+    color: #a9c1dc;
+    font-size: 9px;
+    font-weight: 700;
+}
+.pengpos-sale-items {
+    min-height: 202px;
+    border-top: 1px solid #2c4b6c;
+}
+.pengpos-sale-item {
+    display: grid;
+    grid-template-columns: 1.8fr 0.45fr 0.8fr 0.8fr 14px;
+    gap: 4px;
+    padding: 11px 5px;
+    border-bottom: 1px solid #294765;
+    color: #e8f1fc;
+    font-size: 13px;
+    font-weight: 600;
+    transition:
+        background-color 140ms ease,
+        box-shadow 140ms ease;
+}
+.pengpos-sale-item:hover {
+    background: #1e4168;
+    box-shadow: inset 3px 0 0 var(--fresh-blue);
+}
+.pengpos-sale-item span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pengpos-sale-item button {
+    border: 0;
+    background: transparent;
+    color: #aac3df;
+    font-size: 15px;
+}
+.pengpos-sale-empty {
+    padding: 40px 5px;
+    color: #a9c1dc;
+    text-align: center;
+    font-size: 11px;
+}
+.pengpos-totals {
+    display: grid;
+    gap: 9px;
+    padding-top: 14px;
+    border-top: 1px solid #2c4b6c;
+    color: #b6c9df;
+    font-size: 11px;
+}
+.pengpos-totals > div {
+    display: flex;
+    justify-content: space-between;
+}
+.pengpos-totals strong {
+    color: #e8f1fc;
+    font-weight: 700;
+}
+.pengpos-grand-total {
+    margin: 2px -4px 0;
+    padding: 12px 4px;
+    background: #1e4168;
+    color: #f4f8fe;
+    font-size: 15px;
+}
+.pengpos-grand-total strong {
+    color: #ffffff;
+    font-size: 18px;
+}
+.pengpos-payment-actions {
+    gap: 8px;
+    margin-top: 15px;
+}
+.pengpos-payment-actions button {
+    min-height: 59px;
+    flex: 1;
+    border: 1px solid #41658c;
+    border-radius: 7px;
+    background: #1b395d;
+    color: #e8f1fc;
+    font-size: 11px;
+}
+.pengpos-payment-actions .pengpos-pay {
+    flex: 1.45;
+    border-color: var(--fresh-blue);
+    background: var(--fresh-blue);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+}
+.pengpos-payment-actions button:hover {
+    filter: brightness(0.97);
+}
+.pengpos-error {
+    margin: 0 0 8px;
+    color: #c2413b;
+    font-size: 11px;
+}
+@media (max-width: 1100px) {
+    .pengpos-workspace {
+        grid-template-columns: 110px minmax(0, 1fr) 280px;
+        min-height: 0;
+    }
+    .pengpos-sale {
+        min-height: 0;
+        height: auto;
+        padding: 13px 9px;
+    }
+    .pengpos-sale-items {
+        min-height: 0;
+    }
+    .pengpos-payment-actions {
+        max-width: 430px;
+        margin-left: auto;
+    }
+}
+@media (max-width: 700px) {
+    .pengpos-page {
+        margin: -18px -16px;
+        border-radius: 0;
+    }
+    .pengpos-header {
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        padding: 15px;
+    }
+    .pengpos-search-wrap {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+    .pengpos-clock {
+        display: none;
+    }
+    .pengpos-workspace {
+        grid-template-columns: minmax(0, 1fr) 190px;
+    }
+    .pengpos-categories {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: 8px;
+    }
+    .pengpos-categories::-webkit-scrollbar {
+        display: none;
+    }
+    .pengpos-category {
+        min-width: max-content;
+        width: auto;
+    }
+    .pengpos-product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .pengpos-products {
+        grid-column: 1;
+        padding: 10px;
+    }
+    .pengpos-sale {
+        grid-column: 2;
+        padding: 10px 7px;
+    }
+    .pengpos-sale-heading {
+        margin-bottom: 10px;
+    }
+    .pengpos-sale-heading h2 {
+        font-size: 13px;
+    }
+    .pengpos-sale-labels,
+    .pengpos-sale-item {
+        font-size: 8px;
+    }
+    .pengpos-sale-item {
+        grid-template-columns: 1.8fr 0.45fr 0.8fr 0.8fr 12px;
+        gap: 2px;
+        padding: 8px 2px;
+    }
+    .pengpos-totals {
+        gap: 6px;
+        padding-top: 10px;
+        font-size: 9px;
+    }
+    .pengpos-grand-total {
+        padding: 9px 3px;
+        font-size: 12px;
+    }
+    .pengpos-grand-total strong {
+        font-size: 14px;
+    }
+    .pengpos-payment-actions {
+        gap: 4px;
+        margin-top: 10px;
+    }
+    .pengpos-payment-actions button,
+    .pengpos-payment-actions .pengpos-pay {
+        min-height: 44px;
+        font-size: 9px;
+    }
+}
+
 * {
     box-sizing: border-box;
 }
@@ -129,10 +617,10 @@ a:focus-visible {
     font-size: 11px;
 }
 .main-content {
-    flex: 1 1 auto;
+    flex: 1 1 0%;
     min-width: 0;
-    width: auto;
-    max-width: 1280px;
+    width: calc(100% - 264px);
+    max-width: none;
     padding: 42px clamp(24px, 5vw, 72px);
 }
 .page-heading,
@@ -150,6 +638,26 @@ a:focus-visible {
     font-size: clamp(30px, 3vw, 42px);
     line-height: 1.08;
     letter-spacing: -0.04em;
+}
+.report-filters {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    min-width: min(100%, 460px);
+}
+.report-filters label {
+    display: grid;
+    flex: 1 1 0;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.report-filters input,
+.report-filters select {
+    min-width: 0;
 }
 .section-heading h2 {
     margin: 0;
@@ -228,6 +736,16 @@ button:disabled {
 .button-secondary:hover {
     background: #dbeafe;
 }
+.button-success,
+.btn-success {
+    background: #16a34a;
+    border-color: #15803d;
+    color: #fff;
+}
+.button-success:hover,
+.btn-success:hover {
+    background: #15803d;
+}
 .button-wide {
     width: 100%;
 }
@@ -252,10 +770,12 @@ button:disabled {
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 12px;
+    color: inherit;
     padding: 21px;
     box-shadow: var(--shadow-sm);
     display: grid;
     gap: 10px;
+    text-decoration: none;
 }
 .metric span,
 .metric small {
@@ -348,7 +868,7 @@ td small {
 .product-actions {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    /* justify-content: flex-end; */
     gap: 12px;
     margin: -4px 0 14px;
     color: var(--muted);
@@ -392,7 +912,7 @@ textarea {
     resize: vertical;
 }
 .toolbar input {
-    max-width: 450px;
+    max-width: none;
 }
 .product-form {
     display: grid;
@@ -466,6 +986,14 @@ textarea {
         11px Arial,
         sans-serif;
 }
+.expiry-soon {
+    color: #b54708;
+    font-weight: 700;
+}
+.expiry-expired {
+    color: #b42318;
+    font-weight: 700;
+}
 .narrow {
     max-width: 520px;
 }
@@ -512,6 +1040,35 @@ textarea {
     display: grid;
     grid-template-columns: 1fr 330px;
     gap: 25px;
+}
+.pos-scan-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 86px;
+    gap: 8px;
+    align-items: center;
+}
+.quantity-input {
+    text-align: center;
+}
+.quantity-hint {
+    color: var(--muted);
+    font:
+        11px Arial,
+        sans-serif;
+    text-align: center;
+    white-space: nowrap;
+}
+.quantity-display {
+    padding: 12px 8px;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    background: rgb(37 99 235 / 8%);
+    color: var(--accent);
+    font:
+        700 12px Arial,
+        sans-serif;
+    text-align: center;
+    white-space: nowrap;
 }
 .product-grid {
     display: grid;
@@ -677,6 +1234,59 @@ textarea {
     color: var(--accent);
     font-size: 23px;
 }
+.checkout-payment {
+    display: grid;
+    gap: 8px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+}
+.checkout-payment label {
+    color: var(--muted);
+    font-size: 12px;
+}
+.money-input {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--muted);
+    font-size: 17px;
+}
+.money-input span {
+    padding-left: 13px;
+}
+.money-input input {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 20px;
+    font-weight: 700;
+}
+.money-input input:focus {
+    outline: 0;
+}
+.field-error {
+    color: #c2413b;
+    font-size: 12px;
+}
+.change-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 13px;
+}
+.change-row strong {
+    color: var(--ink);
+    font-size: 18px;
+}
+.change-row .change-positive {
+    color: #26835b;
+}
 .checkout-actions {
     display: flex;
     justify-content: flex-end;
@@ -711,6 +1321,11 @@ textarea {
 .login-panel .stack-form {
     margin-top: 32px;
 }
+@media (max-width: 1024px) {
+    .product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
 @media (max-width: 850px) {
     .sidebar {
         width: 190px;
@@ -720,13 +1335,23 @@ textarea {
         padding: 35px 24px;
     }
     .pos-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr) 260px;
+        gap: 14px;
     }
     .cart-panel {
         min-height: 0;
+        padding: 17px;
     }
     .product-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .product-tile {
+        min-height: 112px;
+        padding: 13px;
+    }
+    .product-tile strong {
+        font-size: 15px;
     }
 }
 @media (max-width: 620px) {
@@ -751,11 +1376,84 @@ textarea {
         display: none;
     }
     .main-content {
-        padding: 30px 16px;
+        padding: 22px 10px;
+    }
+    .pos-layout {
+        grid-template-columns: minmax(0, 1fr) 208px;
+        gap: 8px;
+    }
+    .pos-scan-controls {
+        grid-template-columns: minmax(0, 1fr) 58px;
+        gap: 5px;
+    }
+    .pos-scan-controls input,
+    .quantity-display {
+        padding: 9px 8px;
+        font-size: 12px;
+    }
+    .quantity-hint {
+        font-size: 9px;
+    }
+    .product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 10px;
+    }
+    .product-tile {
+        min-height: 94px;
+        padding: 10px;
+        border-radius: 8px;
+    }
+    .product-tile strong {
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+    .product-tile span {
+        font-size: 12px;
+    }
+    .product-tile small {
+        font-size: 9px;
+    }
+    .cart-panel {
+        padding: 12px;
+        border-radius: 9px;
+    }
+    .cart-panel .section-heading {
+        margin-bottom: 10px;
+    }
+    .cart-panel .section-heading h2 {
+        font-size: 15px;
+    }
+    .cart-line {
+        gap: 5px;
+        padding: 9px 0;
+    }
+    .cart-line strong {
+        font-size: 12px;
+        overflow-wrap: anywhere;
+    }
+    .cart-line small,
+    .pos-payment,
+    .cart-panel .button {
+        font-size: 10px;
+    }
+    .cart-total {
+        margin: 15px 0;
+        font-size: 12px;
+    }
+    .cart-total strong {
+        font-size: 16px;
+    }
+    .pos-payment select {
+        padding: 8px;
     }
     .page-heading {
         align-items: start;
         flex-direction: column;
+    }
+    .report-filters {
+        width: 100%;
+        flex-wrap: wrap;
     }
     .metric-grid,
     .product-form {

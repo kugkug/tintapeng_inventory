@@ -26,9 +26,19 @@ class Products extends Component
 
     public string $search = '';
 
+    public string $categoryFilterId = '';
+
+    public bool $showLowStockOnly = false;
+
+    public bool $showFastMovingOnly = false;
+
     public bool $showForm = false;
 
     public ?int $editingProductId = null;
+
+    public bool $isDuplicating = false;
+
+    public string $originalDuplicateSku = '';
 
     public array $selectedProductIds = [];
 
@@ -44,11 +54,39 @@ class Products extends Component
 
     public string $sellingPrice = '';
 
-    public int $quantity = 1;
+    public string $quantity = '1';
+
+    public ?string $expirationDate = null;
 
     public ?int $categoryId = null;
 
+    public function mount(): void
+    {
+        $this->showLowStockOnly = request()->boolean('lowstock');
+        $this->showFastMovingOnly = request()->boolean('fastmoving');
+    }
+
+    public function toggleSelectAllCurrentPage(bool $checked, array $productIds): void
+    {
+        $productIds = array_values(array_unique(array_map('intval', $productIds)));
+        $selectedProductIds = array_values(array_unique(array_map('intval', $this->selectedProductIds)));
+
+        $this->selectedProductIds = $checked
+            ? array_values(array_unique(array_merge($selectedProductIds, $productIds)))
+            : array_values(array_diff($selectedProductIds, $productIds));
+    }
+
     public function updatedSearch(): void
+    {
+        try {
+            $this->resetPage();
+        } catch (Throwable $exception) {
+            $this->logException(__FUNCTION__, $exception);
+            throw $exception;
+        }
+    }
+
+    public function updatedCategoryFilterId(): void
     {
         try {
             $this->resetPage();
@@ -86,10 +124,14 @@ class Products extends Component
             $data = $this->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'sku' => [
+                    Rule::requiredIf($this->isDuplicating),
                     'nullable',
                     'string',
                     'max:100',
                     'regex:/^[A-Za-z0-9._\-\s]+$/',
+                    Rule::notIn($this->isDuplicating && $this->originalDuplicateSku !== ''
+                        ? [$this->originalDuplicateSku]
+                        : []),
                     Rule::unique('products', 'sku')
                         ->where(fn ($query) => $query->where('tenant_id', $this->currentUser()->tenant_id))
                         ->ignore($this->editingProductId),
@@ -98,7 +140,11 @@ class Products extends Component
                 'totalCost' => ['required', 'numeric', 'min:0'],
                 'sellingPrice' => ['required', 'numeric', 'min:0'],
                 'quantity' => ['required', 'integer', 'min:1'],
+                'expirationDate' => ['nullable', 'date'],
                 'categoryId' => ['nullable', 'integer'],
+            ], [
+                'sku.required' => 'Enter a new SKU for the duplicated product.',
+                'sku.not_in' => 'The duplicated product must have a different SKU.',
             ]);
 
             $data['costPerUnit'] = round((float) $data['totalCost'] / $data['quantity'], 2);
@@ -120,7 +166,7 @@ class Products extends Component
                         'selling_price' => $data['sellingPrice'],
                     ]);
 
-                    $this->saveInventoryQuantity($product, $data['quantity']);
+                    $this->saveInventoryQuantity($product, $data['quantity'], $data['expirationDate']);
                 });
 
                 $product->update(app(BarcodeService::class)->generateBarcode($product));
@@ -138,7 +184,7 @@ class Products extends Component
                         'selling_price' => $data['sellingPrice'],
                     ]);
 
-                    $this->saveInventoryQuantity($product, $data['quantity']);
+                    $this->saveInventoryQuantity($product, $data['quantity'], $data['expirationDate']);
 
                     return $product;
                 });
@@ -170,6 +216,36 @@ class Products extends Component
             $this->unit = $product->unit;
             $inventory = $this->inventoryForProduct($product);
             $this->quantity = $inventory?->quantity ?? 0;
+            $this->expirationDate = $inventory?->expiration_date?->format('Y-m-d');
+            $this->totalCost = number_format((float) $product->cost_per_unit * $this->quantity, 2, '.', '');
+            $this->costPerUnit = (string) $product->cost_per_unit;
+            $this->sellingPrice = (string) $product->selling_price;
+            $this->categoryId = $product->category_id;
+            $this->showForm = true;
+        } catch (Throwable $exception) {
+            $this->logException(__FUNCTION__, $exception, ['product_id' => $productId]);
+            throw $exception;
+        }
+    }
+
+    public function duplicate(int $productId): void
+    {
+        try {
+            abort_unless($this->currentUser()->isManager(), 403);
+
+            $product = Product::where('tenant_id', $this->currentUser()->tenant_id)
+                ->where('is_active', true)
+                ->findOrFail($productId);
+            $inventory = $this->inventoryForProduct($product);
+
+            $this->editingProductId = null;
+            $this->isDuplicating = true;
+            $this->originalDuplicateSku = (string) ($product->sku ?? '');
+            $this->name = $product->name;
+            $this->sku = '';
+            $this->unit = $product->unit;
+            $this->quantity = max(1, (int) ($inventory?->quantity ?? 1));
+            $this->expirationDate = $inventory?->expiration_date?->format('Y-m-d');
             $this->totalCost = number_format((float) $product->cost_per_unit * $this->quantity, 2, '.', '');
             $this->costPerUnit = (string) $product->cost_per_unit;
             $this->sellingPrice = (string) $product->selling_price;
@@ -294,12 +370,42 @@ class Products extends Component
         }
     }
 
+    public function downloadSelectedProductLabels(): mixed
+    {
+        try {
+            $productIds = array_values(array_filter(array_map('intval', $this->selectedProductIds)));
+            if ($productIds === []) {
+                session()->flash('status', 'Select at least one product first.');
+
+                return null;
+            }
+
+            $this->selectedProductIds = [];
+
+            return redirect()->route('products.labels-pdf', ['ids' => $productIds]);
+        } catch (Throwable $exception) {
+            $this->logException(__FUNCTION__, $exception, ['product_ids' => $this->selectedProductIds]);
+            throw $exception;
+        }
+    }
+
     private function resetForm(): void
     {
         try {
-            $this->reset(['name', 'sku', 'totalCost', 'costPerUnit', 'sellingPrice', 'categoryId', 'editingProductId']);
+            $this->reset([
+                'name',
+                'sku',
+                'totalCost',
+                'costPerUnit',
+                'sellingPrice',
+                'expirationDate',
+                'categoryId',
+                'editingProductId',
+                'isDuplicating',
+                'originalDuplicateSku',
+            ]);
             $this->unit = 'pc';
-            $this->quantity = 1;
+            $this->quantity = '1';
         } catch (Throwable $exception) {
             $this->logException(__FUNCTION__, $exception);
             throw $exception;
@@ -309,7 +415,7 @@ class Products extends Component
     private function calculateCostPerUnit(): void
     {
         try {
-            $quantity = (int) $this->quantity;
+            $quantity = (int) ($this->quantity ?: 0);
 
             $this->costPerUnit = $quantity > 0 && is_numeric($this->totalCost)
                 ? number_format((float) $this->totalCost / $quantity, 2, '.', '')
@@ -320,7 +426,7 @@ class Products extends Component
         }
     }
 
-    private function saveInventoryQuantity(Product $product, int $quantity): void
+    private function saveInventoryQuantity(Product $product, int $quantity, ?string $expirationDate = null): void
     {
         try {
             $location = $this->currentUser()->tenant->locations()
@@ -331,7 +437,11 @@ class Products extends Component
 
             InventoryItem::updateOrCreate(
                 ['product_id' => $product->id, 'location_id' => $location->id],
-                ['quantity' => $quantity, 'last_updated_at' => now()],
+                [
+                    'quantity' => $quantity,
+                    'expiration_date' => $expirationDate ?: null,
+                    'last_updated_at' => now(),
+                ],
             );
         } catch (Throwable $exception) {
             $this->logException(__FUNCTION__, $exception, ['product_id' => $product->id]);
@@ -379,16 +489,28 @@ class Products extends Component
     {
         try {
             $tenantId = $this->currentUser()->tenant_id;
+            $fastMovingSince = today()->subDays(30);
+            $products = Product::where('tenant_id', $tenantId)
+                ->where('is_active', true)
+                ->when($this->categoryFilterId !== '', fn ($query) => $query->where('category_id', $this->categoryFilterId))
+                ->when($this->showLowStockOnly, fn ($query) => $query->lowStock())
+                ->when($this->showFastMovingOnly, function ($query) use ($tenantId, $fastMovingSince): void {
+                    $query->withSum(['saleItems as sold_quantity' => function ($query) use ($tenantId, $fastMovingSince): void {
+                        $query->whereHas('sale', function ($query) use ($tenantId, $fastMovingSince): void {
+                            $query->where('tenant_id', $tenantId)
+                                ->whereDate('created_at', '>=', $fastMovingSince);
+                        });
+                    }], 'quantity')
+                        ->having('sold_quantity', '>', 0);
+                })
+                ->where(fn ($query) => $query->where('name', 'like', "%{$this->search}%")
+                    ->orWhere('sku', 'like', "%{$this->search}%")
+                    ->orWhere('barcode', 'like', "%{$this->search}%"))
+                ->with('category', 'inventoryItems')
+                ->when($this->showFastMovingOnly, fn ($query) => $query->orderByDesc('sold_quantity'), fn ($query) => $query->orderBy('name'));
 
             return view('livewire.products', [
-                'products' => Product::where('tenant_id', $tenantId)
-                    ->where('is_active', true)
-                    ->where(fn ($query) => $query->where('name', 'like', "%{$this->search}%")
-                        ->orWhere('sku', 'like', "%{$this->search}%")
-                        ->orWhere('barcode', 'like', "%{$this->search}%"))
-                    ->with('category', 'inventoryItems')
-                    ->latest()
-                    ->paginate(12),
+                'products' => $products->paginate(12),
                 'categories' => Category::where('tenant_id', $tenantId)->orderBy('name')->get(),
                 'units' => Unit::where('tenant_id', $tenantId)->where('is_active', true)->orderBy('name')->get(),
             ]);

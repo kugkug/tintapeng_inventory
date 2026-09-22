@@ -10,11 +10,46 @@
         <div class="metric"><span>Today
                 revenue</span><strong>₱{{ number_format($todayRevenue, 2) }}</strong><small>{{ $todaySales }}
                 transactions</small></div>
-        <div class="metric"><span>Products</span><strong>{{ number_format($productCount) }}</strong><small>Across your
-                catalog</small></div>
-        <div class="metric metric-alert"><span>Low
-                stock</span><strong>{{ number_format($lowStockCount) }}</strong><small>Needs attention</small></div>
+
+        <a class="metric metric-alert"
+            href="{{ route('products') }}"><span>Products</span><strong>{{ number_format($productCount) }}</strong><small>Across
+                your catalog</small></a>
+        <a class="metric metric-alert" href="{{ route('products', ['lowstock' => 1]) }}"><span>Low
+                stock</span><strong>{{ number_format($lowStockCount) }}</strong><small>Needs attention</small></a>
     </div>
+    <section class="content-section">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Last 30 days</p>
+                <h2>Fast-moving items</h2>
+            </div><a class="text-link" href="{{ route('products', ['fastmoving' => 1]) }}">View all fast-moving
+                products</a>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>SKU</th>
+                        <th>Units sold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($fastMovingProducts as $product)
+                        <tr>
+                            <td><strong>{{ $product->name }}</strong></td>
+                            <td class="mono">{{ $product->sku }}</td>
+                            <td>{{ number_format($product->sold_quantity) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="empty">No product sales recorded in the last 30 days.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
     <section class="content-section">
         <div class="section-heading">
             <div>

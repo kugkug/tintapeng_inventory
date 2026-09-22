@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventoryItem;
 use App\Models\Product;
 use App\Services\BarcodeService;
 use App\Services\ProductService;
@@ -75,6 +76,7 @@ class ProductController extends Controller
             'cost_per_unit' => 'required|numeric|min:0',
             'selling_price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
+            'expiration_date' => 'sometimes|nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -110,6 +112,7 @@ class ProductController extends Controller
             // Auto-generate barcode on product creation (core feature)
             $barcodeData = $this->barcodeService->generateBarcode($product);
             $product->update($barcodeData);
+            $this->syncExpirationDate($product, $request->input('expiration_date'));
 
             return response()->json([
                 'success' => true,
@@ -208,6 +211,7 @@ class ProductController extends Controller
             'cost_per_unit' => 'sometimes|numeric|min:0',
             'selling_price' => 'sometimes|numeric|min:0',
             'description' => 'nullable|string',
+            'expiration_date' => 'sometimes|nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -235,6 +239,10 @@ class ProductController extends Controller
 
             if ($skuChanged) {
                 $product->update($this->barcodeService->regenerateBarcode($product));
+            }
+
+            if ($request->has('expiration_date')) {
+                $this->syncExpirationDate($product, $request->input('expiration_date'));
             }
 
             return response()->json([
@@ -297,5 +305,23 @@ class ProductController extends Controller
                 'message' => $e->getMessage(),
             ], 400);
         }
+    }
+
+    private function syncExpirationDate(Product $product, ?string $expirationDate): void
+    {
+        $location = $product->tenant->locations()
+            ->where('is_active', true)
+            ->orderByDesc('is_main_warehouse')
+            ->orderBy('id')
+            ->first();
+
+        if (!$location) {
+            return;
+        }
+
+        InventoryItem::updateOrCreate(
+            ['product_id' => $product->id, 'location_id' => $location->id],
+            ['expiration_date' => $expirationDate ?: null],
+        );
     }
 }

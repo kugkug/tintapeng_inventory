@@ -31,6 +31,10 @@ class InventoryController extends Controller
         try {
             $user = auth('api')->user();
             $locationId = $request->input('location_id');
+            $expired = $request->boolean('expired');
+            $expiringWithinDays = $request->has('expiring_within_days')
+                ? $request->integer('expiring_within_days')
+                : null;
 
             $query = DB::table('inventory_items')
                 ->join('products', 'inventory_items.product_id', '=', 'products.id')
@@ -40,6 +44,17 @@ class InventoryController extends Controller
 
             if ($locationId) {
                 $query->where('inventory_items.location_id', $locationId);
+            }
+
+            if ($expired) {
+                $query->whereNotNull('inventory_items.expiration_date')
+                    ->whereDate('inventory_items.expiration_date', '<', today());
+            } elseif ($expiringWithinDays !== null && $expiringWithinDays >= 0) {
+                $query->whereNotNull('inventory_items.expiration_date')
+                    ->whereBetween('inventory_items.expiration_date', [
+                        today(),
+                        today()->addDays(min($expiringWithinDays, 3650)),
+                    ]);
             }
 
             $inventory = $query->paginate(50);
@@ -72,6 +87,7 @@ class InventoryController extends Controller
             'quantity' => 'required|integer|not_in:0',
             'reason' => 'required|string|in:purchase,sale,adjustment,damage,return,counting',
             'notes' => 'nullable|string',
+            'expiration_date' => 'sometimes|nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -116,7 +132,9 @@ class InventoryController extends Controller
                         $product->id,
                         $user->tenant_id,
                         $quantity,
-                        $request->input('location_id')
+                        $request->input('location_id'),
+                        $request->input('expiration_date'),
+                        $request->has('expiration_date'),
                     );
                 }
             }

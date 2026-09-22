@@ -1,4 +1,7 @@
-<div>
+<div x-data x-init="$nextTick(() => $refs.search?.focus())"
+    x-on:keydown.window="if ($event.key === '*' && document.activeElement === $refs.search && !$wire.quantityEntryActive) { $event.preventDefault(); $wire.activateQuantityEntry(); }"
+    x-on:pos-focus-search.window="$nextTick(() => $refs.search?.focus())"
+    x-effect="if ($wire.quantityEntryActive) { $nextTick(() => $refs.quantity?.focus()) }">
     <div class="page-heading">
         <div>
             <p class="eyebrow">Sales desk</p>
@@ -7,8 +10,24 @@
         </div>
     </div>
     <div class="pos-layout">
-        <section><input class="search-input" wire:model.live.debounce.250ms="search"
-                wire:keydown.enter.prevent="scanBarcode" type="search" placeholder="Scan barcode or search products...">
+        <section>
+            <div class="pos-scan-controls">
+                <input class="search-input" x-ref="search" wire:model.live.debounce.250ms="search"
+                    wire:keydown.enter.prevent="scanBarcode" type="search"
+                    placeholder="Scan barcode or search products...">
+                @if ($quantityEntryActive)
+                    <input class="quantity-input" x-ref="quantity" wire:model.live="quantityInput"
+                        wire:keydown.enter.prevent="confirmQuantity" type="number" min="1" step="1"
+                        placeholder="Qty" aria-label="Quantity to add">
+                @elseif ($quantityConfigured)
+                    <span class="quantity-display" aria-label="Quantity to add">Qty {{ $pendingQuantity }}</span>
+                @else
+                    <span class="quantity-hint" aria-label="Press asterisk to enter quantity">* qty</span>
+                @endif
+            </div>
+            @error('quantityInput')
+                <small class="field-error">{{ $message }}</small>
+            @enderror
             <div class="product-grid">
                 @forelse($products as $product)
                     <button type="button" class="product-tile"
@@ -40,7 +59,8 @@
         </aside>
     </div>
     @if ($showCheckoutModal)
-        <div class="checkout-modal" wire:keydown.escape="closeCheckoutModal" role="dialog" aria-modal="true"
+        <div class="checkout-modal" wire:keydown.escape="closeCheckoutModal" x-on:keydown.enter.prevent="$wire.checkout()"
+            role="dialog" aria-modal="true"
             aria-labelledby="checkout-title">
             <div class="checkout-dialog">
                 <div class="checkout-header">
@@ -62,15 +82,49 @@
                 </div>
                 <div class="checkout-summary">
                     <div><span>Subtotal</span><strong>₱{{ number_format($this->cartTotal, 2) }}</strong></div>
-                    <div><span>Discount</span><strong>₱0.00</strong></div>
+                    <div><span>Discount</span><strong>-₱{{ number_format((float) ($discountAmount ?: 0), 2) }}</strong>
+                    </div>
                     <div><span>Tax</span><strong>₱0.00</strong></div>
-                    <div class="checkout-grand-total"><span>Total</span><strong>₱{{ number_format($this->cartTotal, 2) }}</strong></div>
+                    <div class="checkout-grand-total">
+                        <span>Total</span><strong>₱{{ number_format($this->discountedTotal, 2) }}</strong>
+                    </div>
                     <div><span>Payment method</span><strong>{{ ucfirst($paymentMethod) }}</strong></div>
                 </div>
+                <div class="checkout-payment">
+                    <label for="discount-amount">Bulk order discount</label>
+                    <div class="money-input">
+                        <span>₱</span>
+                        <input id="discount-amount" type="number" min="0" step="0.01"
+                            wire:model.live="discountAmount" placeholder="0.00" inputmode="decimal">
+                    </div>
+                    <small class="muted">Optional discount for bulky orders.</small>
+                    @error('discountAmount')
+                        <small class="field-error">{{ $message }}</small>
+                    @enderror
+                    <label for="amount-paid">{{ $paymentMethod === 'cash' ? 'Amount paid' : 'Amount charged' }}</label>
+                    <div class="money-input">
+                        <span>₱</span>
+                        <input id="amount-paid" type="number" min="0" step="0.01"
+                            wire:model.live="amountPaid" placeholder="0.00" inputmode="decimal"
+                            @disabled($paymentMethod !== 'cash')>
+                    </div>
+                    @error('amountPaid')
+                        <small class="field-error">{{ $message }}</small>
+                    @enderror
+                    <div class="change-row">
+                        <span>Change</span>
+                        <strong class="{{ $this->changeAmount > 0 ? 'change-positive' : '' }}">
+                            ₱{{ number_format($this->changeAmount, 2) }}
+                        </strong>
+                    </div>
+                </div>
                 <div class="checkout-actions">
-                    <button class="button button-secondary" type="button" wire:click="closeCheckoutModal">Back to cart</button>
+                    <button class="button button-secondary" type="button" wire:click="closeCheckoutModal">Back to
+                        cart</button>
                     <button class="button button-primary" type="button" wire:click="checkout"
-                        wire:loading.attr="disabled">Confirm and download receipt</button>
+                        wire:loading.attr="disabled">Confirm</button>
+                    <button class="button button-success" type="button" wire:click="checkout(true)"
+                        wire:loading.attr="disabled">Confirm and Download Receipt</button>
                 </div>
             </div>
         </div>

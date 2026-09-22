@@ -11,12 +11,14 @@ class InventoryItem extends Model
         'product_id',
         'location_id',
         'quantity',
+        'expiration_date',
         'reserved_quantity',
         'last_updated_at',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
+        'expiration_date' => 'date',
         'reserved_quantity' => 'integer',
         'last_updated_at' => 'datetime',
         'created_at' => 'datetime',

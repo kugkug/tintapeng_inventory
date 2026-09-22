@@ -3,7 +3,9 @@
         <div>
             <p class="eyebrow">Catalog</p>
             <h1>Products</h1>
-            <p class="muted">Search and maintain the products in this tenant.</p>
+            <p class="muted">
+                {{ $showFastMovingOnly ? 'Products ranked by units sold in the last 30 days.' : 'Search and maintain the products in this tenant.' }}
+            </p>
         </div>
         @if (auth()->user()->isManager())
             <button class="button button-primary"
@@ -13,7 +15,8 @@
     @if ($showForm)
         <section class="form-panel">
             <div class="section-heading">
-                <h2>{{ $editingProductId ? 'Edit product' : 'New product' }}</h2><span class="form-note">Costs are
+                <h2>{{ $isDuplicating ? 'Duplicate product' : ($editingProductId ? 'Edit product' : 'New product') }}
+                </h2><span class="form-note">Costs are
                     calculated from total cost and quantity.</span>
             </div>
             <form wire:submit.prevent="save" class="product-form">
@@ -24,7 +27,8 @@
                         <span class="field-error">{{ $message }}</span>
                     @enderror
                 </label>
-                <label>SKU<input wire:model="sku" type="text" placeholder="Optional, e.g. COFFEE-001">
+                <label>SKU<input wire:model="sku" type="text"
+                        placeholder="{{ $isDuplicating ? 'Required, enter a new SKU' : 'Optional, e.g. COFFEE-001' }}">
                     @error('sku')
                         <span class="field-error">{{ $message }}</span>
                     @enderror
@@ -49,6 +53,7 @@
                     Quantity
                     <input wire:model.live="quantity" type="number" min="1" placeholder="1">
                 </label>
+
                 <label>
                     Total cost<input wire:model.live="totalCost" type="number" min="0" step="0.01"
                         placeholder="0.00">
@@ -57,19 +62,38 @@
                         placeholder="Automatically calculated" readonly></label>
 
                 <label>Selling price<input wire:model="sellingPrice" type="number" step="0.01"
-                        placeholder="0.00"></label><button class="button button-primary"
+                        placeholder="0.00"></label>
+                <label>
+                    Expiration Date (Optional)
+                    <input wire:model="expirationDate" type="date">
+                    @error('expirationDate')
+                        <span class="field-error">{{ $message }}</span>
+                    @enderror
+                </label>
+                <button class="button button-primary"
                     type="submit">{{ $editingProductId ? 'Save changes' : 'Create product' }}</button>
             </form>
         </section>
     @endif
     <div class="toolbar">
         <input wire:model.live.debounce.300ms="search" type="search" placeholder="Search by name, SKU, or barcode...">
+        <select wire:model.live="categoryFilterId" aria-label="Filter products by category">
+            <option value="">All categories</option>
+            @foreach ($categories as $category)
+                <option value="{{ $category->id }}">{{ $category->name }}</option>
+            @endforeach
+        </select>
     </div>
+    @if ($showFastMovingOnly)
+        <div class="flash">Fast-moving products are ranked by units sold during the last 30 days.</div>
+    @endif
     <div class="product-actions"><span>{{ count($selectedProductIds) }} selected</span><button
             class="button button-small button-secondary" wire:click="downloadSelectedBarcodes"
             @disabled(count($selectedProductIds) === 0)>Download selected PDF</button>
         <button class="button button-small button-secondary" wire:click="downloadSelectedBarcodeImages"
             @disabled(count($selectedProductIds) === 0)>Download barcode images</button>
+        <button class="button button-small button-secondary" wire:click="downloadSelectedProductLabels"
+            @disabled(count($selectedProductIds) === 0)>Generate name and price</button>
         @if (auth()->user()->isManager())
             <button class="button button-small" wire:click="generateSelectedBarcodes"
                 @disabled(count($selectedProductIds) === 0)>Generate selected barcodes</button>
@@ -77,15 +101,30 @@
     </div>
     <section class="content-section">
         <div class="table-wrap">
+            @php
+                $currentPageIds = $products->pluck('id')->map(fn($id) => (int) $id)->values()->all();
+                $selectedIds = collect($selectedProductIds)->map(fn($id) => (int) $id);
+                $allCurrentPageSelected =
+                    $currentPageIds !== [] &&
+                    $selectedIds->intersect($currentPageIds)->count() === count($currentPageIds);
+            @endphp
             <table>
                 <thead>
                     <tr>
-                        <th></th>
+                        <th>
+                            <input class="product-check" type="checkbox" @checked($allCurrentPageSelected)
+                                wire:change="toggleSelectAllCurrentPage($event.target.checked, {{ json_encode($currentPageIds) }})"
+                                aria-label="Select all products on this page">
+                        </th>
                         <th>Product</th>
                         <th>SKU</th>
                         <th>Category</th>
                         <th>Stock</th>
+                        <th>Expiration</th>
                         <th>Price</th>
+                        @if ($showFastMovingOnly)
+                            <th>Units sold</th>
+                        @endif
                         @if (auth()->user()->isManager())
                             <th>Actions</th>
                         @endif
@@ -101,19 +140,44 @@
                             <td class="mono">{{ $product->sku }}</td>
                             <td>{{ $product->category?->name ?? 'Uncategorised' }}</td>
                             <td>{{ $product->inventoryItems->sum('quantity') }}</td>
+                            @php
+                                $expirationDate = $product->inventoryItems
+                                    ->whereNotNull('expiration_date')
+                                    ->sortBy('expiration_date')
+                                    ->first()?->expiration_date;
+                            @endphp
+                            <td>
+                                @if ($expirationDate)
+                                    <span
+                                        class="{{ $expirationDate->isPast() ? 'expiry-expired' : ($expirationDate->lte(now()->addDays(30)) ? 'expiry-soon' : '') }}">
+                                        {{ $expirationDate->format('M d, Y') }}
+                                    </span>
+                                @else
+                                    <span class="muted">No expiry</span>
+                                @endif
+                            </td>
                             <td>₱{{ number_format($product->selling_price, 2) }}</td>
+                            @if ($showFastMovingOnly)
+                                <td>{{ number_format($product->sold_quantity) }}</td>
+                            @endif
                             @if (auth()->user()->isManager())
                                 <td class="table-actions"><button class="button button-small"
-                                        wire:click="edit({{ $product->id }})">Edit</button><button
-                                        class="button button-small button-secondary"
+                                        wire:click="edit({{ $product->id }})">Edit</button>
+                                    <button class="button button-small btn-success"
+                                        wire:click="duplicate({{ $product->id }})">Duplicate
+                                    </button>
+
+                                    <button class="button button-small button-secondary"
                                         wire:click="generateBarcode({{ $product->id }})">{{ $product->barcode ? 'Regenerate' : 'Generate' }}</button><button
                                         class="button button-small button-danger"
                                         wire:click="remove({{ $product->id }})"
-                                        wire:confirm="Hide {{ $product->name }} from the catalog?">Remove</button></td>
+                                        wire:confirm="Hide {{ $product->name }} from the catalog?">Remove</button>
+                                </td>
                             @endif
                         </tr>
                     @empty<tr>
-                            <td colspan="{{ auth()->user()->isManager() ? 8 : 5 }}" class="empty">No products match
+                            <td colspan="{{ (auth()->user()->isManager() ? 9 : 6) + ($showFastMovingOnly ? 1 : 0) }}"
+                                class="empty">No products match
                                 this search.</td>
                         </tr>
                     @endforelse

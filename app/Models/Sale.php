@@ -18,6 +18,8 @@ class Sale extends Model
         'tax_amount',
         'total_amount',
         'payment_method',
+        'amount_paid',
+        'change_amount',
         'notes',
     ];
 
@@ -26,6 +28,8 @@ class Sale extends Model
         'discount_amount' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'amount_paid' => 'decimal:2',
+        'change_amount' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

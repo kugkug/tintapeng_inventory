@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Models\Category;
+use App\Models\Location;
 use App\Models\Product;
 use Tests\TestCase;
 
@@ -48,6 +49,31 @@ class ProductTest extends TestCase
         $product = Product::where('sku', 'SKU-TEST-001')->first();
         $this->assertNotNull($product->barcode);
         $this->assertEquals('CODE128', $product->barcode_format);
+    }
+
+    public function test_manager_can_create_product_with_optional_expiration_date(): void
+    {
+        $category = Category::factory()->create(['tenant_id' => $this->tenant->id]);
+        Location::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'is_main_warehouse' => true,
+        ]);
+
+        $response = $this->withHeaders($this->getApiHeaders($this->managerToken))
+            ->postJson('/api/v1/products', [
+                'name' => 'Expiring Product',
+                'sku' => 'SKU-EXPIRY-001',
+                'category_id' => $category->id,
+                'cost_per_unit' => 10.00,
+                'selling_price' => 25.00,
+                'expiration_date' => '2026-12-31',
+            ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('inventory_items', [
+            'product_id' => $response->json('data.id'),
+            'expiration_date' => '2026-12-31',
+        ]);
     }
 
     /**

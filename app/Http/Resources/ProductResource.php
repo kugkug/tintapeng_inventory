@@ -28,6 +28,7 @@ class ProductResource extends JsonResource
             'selling_price' => (float) $this->selling_price,
             'profit_margin_percentage' => $this->getProfitMarginPercentage(),
             'description' => $this->description,
+            'inventory_items' => $this->when($this->relationLoaded('inventoryItems'), $this->inventoryItems),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

@@ -14,6 +14,19 @@ class Dashboard extends Component
     public function render()
     {
         $tenantId = Auth::user()->tenant_id;
+        $fastMovingSince = today()->subDays(30);
+        $fastMovingProducts = Product::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->withSum(['saleItems as sold_quantity' => function ($query) use ($tenantId, $fastMovingSince): void {
+                $query->whereHas('sale', function ($query) use ($tenantId, $fastMovingSince): void {
+                    $query->where('tenant_id', $tenantId)
+                        ->whereDate('created_at', '>=', $fastMovingSince);
+                });
+            }], 'quantity')
+            ->having('sold_quantity', '>', 0)
+            ->orderByDesc('sold_quantity')
+            ->limit(5)
+            ->get();
 
         return view('livewire.dashboard', [
             'todaySales' => Sale::where('tenant_id', $tenantId)->whereDate('created_at', today())->count(),
@@ -23,8 +36,9 @@ class Dashboard extends Component
                 ->count(),
             'lowStockCount' => Product::where('tenant_id', $tenantId)
                 ->where('is_active', true)
-                ->whereHas('inventoryItems', fn ($query) => $query->whereColumn('quantity', '<=', 'products.min_stock'))
+                ->lowStock()
                 ->count(),
+            'fastMovingProducts' => $fastMovingProducts,
             'recentSales' => Sale::where('tenant_id', $tenantId)->with('user')->latest()->limit(6)->get(),
         ]);
     }
